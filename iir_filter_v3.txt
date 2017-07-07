@@ -1,0 +1,229 @@
+module type2_iir_MultiplyBlock_left (
+    X,
+    Y1,
+    Y2,
+    Y3,
+    Y4,
+    Y5,
+    Y6,
+    Y7,
+    Y8
+);
+
+  // Port mode declarations:
+  input signed   [23:0] X;
+  output signed  [23:0]
+    Y1,
+    Y2,
+    Y3,
+    Y4,
+    Y5,
+    Y6,
+    Y7,
+    Y8;
+
+  wire [23:0] Y [0:7];
+
+  assign Y1 = Y[0];
+  assign Y2 = Y[1];
+  assign Y3 = Y[2];
+  assign Y4 = Y[3];
+  assign Y5 = Y[4];
+  assign Y6 = Y[5];
+  assign Y7 = Y[6];
+  assign Y8 = Y[7];
+
+  //Multipliers:
+
+  wire signed [23:0]
+    w1,
+    w0;
+
+  assign w1 = X;
+  assign w0 = 0;
+
+  assign Y[0] = w0; //BitwidthUsed(none)
+  assign Y[1] = w0; //BitwidthUsed(none)
+  assign Y[2] = w0; //BitwidthUsed(none)
+  assign Y[3] = w0; //BitwidthUsed(none)
+  assign Y[4] = w0; //BitwidthUsed(none)
+  assign Y[5] = w0; //BitwidthUsed(none)
+  assign Y[6] = w0; //BitwidthUsed(none)
+  assign Y[7] = w0; //BitwidthUsed(none)
+
+  //type2_iir_MultiplyBlock_left area estimate = 0;
+endmodule //type2_iir_MultiplyBlock_left
+
+
+
+
+module type2_iir_MultiplyBlock_right (
+    X,
+    Y1,
+    Y2,
+    Y3,
+    Y4,
+    Y5,
+    Y6,
+    Y7
+);
+
+  // Port mode declarations:
+  input signed   [23:0] X;
+  output signed  [23:0]
+    Y1,
+    Y2,
+    Y3,
+    Y4,
+    Y5,
+    Y6,
+    Y7;
+
+  wire [23:0] Y [0:6];
+
+  assign Y1 = Y[0];
+  assign Y2 = Y[1];
+  assign Y3 = Y[2];
+  assign Y4 = Y[3];
+  assign Y5 = Y[4];
+  assign Y6 = Y[5];
+  assign Y7 = Y[6];
+
+  //Multipliers:
+
+  wire signed [23:0]
+    w1,
+    w0;
+
+  assign w1 = X;
+  assign w0 = 0;
+
+  assign Y[0] = w0; //BitwidthUsed(none)
+  assign Y[1] = w0; //BitwidthUsed(none)
+  assign Y[2] = w0; //BitwidthUsed(none)
+  assign Y[3] = w0; //BitwidthUsed(none)
+  assign Y[4] = w0; //BitwidthUsed(none)
+  assign Y[5] = w0; //BitwidthUsed(none)
+  assign Y[6] = w0; //BitwidthUsed(none)
+
+  //type2_iir_MultiplyBlock_right area estimate = 0;
+endmodule //type2_iir_MultiplyBlock_right
+
+
+
+
+module type2_iir (
+    inData,
+    clk,
+    outData,
+    reset
+);
+
+  // Port mode declarations:
+  input   [23:0] inData;
+  input    clk;
+  output  [23:0] outData;
+  input    reset;
+
+  // Define I/O filenames
+  parameter iFILE = "input.txt";
+  parameter oFILE = "output.txt";
+
+  //Load input through Montana's file2bin
+  reg [23:0] inData_in;
+  reg [23:0] inData_arr [0:1645714];
+  reg [19:0] i;
+
+  initial
+  begin
+	data = 0;
+	$readmemb(iFILE,inData_arr);
+	i = 0;
+
+  always@(posedge clk or negedge reset) begin
+    if(~reset) begin
+      inData_in <= 24'h000000;
+    end  else begin
+	i <= i+1;
+	inData <= inData_arr[i];
+      inData_in <= inData;
+    end
+  end
+
+  //Output to file using Montana's bin2file
+  reg [23:0] outData;
+  wire [23:0] outData_in;
+
+   always @(posedge clk or negedge reset)
+   if(reset)
+   begin
+      fid=$fopen(FILE);
+   end
+   else if(clken & done)
+   begin
+      $fclose(fid);
+   end
+
+  always@(posedge clk) begin
+    if(~reset) begin
+      outData <= 24'h000000;
+    end  else begin
+      outData <= outData_in;
+      $fdisplay (fid,"%d",data);
+    end
+  end
+
+  wire [23:0] multProducts_left [0:7];
+
+  wire [23:0] multProducts_right [0:6];
+
+  type2_iir_MultiplyBlock_left my_type2_iir_MultiplyBlock_left(
+    .X(inData_in),
+    .Y1(multProducts_left[0]),
+    .Y2(multProducts_left[1]),
+    .Y3(multProducts_left[2]),
+    .Y4(multProducts_left[3]),
+    .Y5(multProducts_left[4]),
+    .Y6(multProducts_left[5]),
+    .Y7(multProducts_left[6]),
+    .Y8(multProducts_left[7])
+  );
+
+  type2_iir_MultiplyBlock_right my_type2_iir_MultiplyBlock_right(
+    .X(outData),
+    .Y1(multProducts_right[0]),
+    .Y2(multProducts_right[1]),
+    .Y3(multProducts_right[2]),
+    .Y4(multProducts_right[3]),
+    .Y5(multProducts_right[4]),
+    .Y6(multProducts_right[5]),
+    .Y7(multProducts_right[6])
+  );
+
+  reg [23:0] iirStep[0:6];
+
+  always@(posedge clk or negedge reset) begin
+    if(~reset) begin
+      iirStep[0] <= 24'h000000;
+      iirStep[1] <= 24'h000000;
+      iirStep[2] <= 24'h000000;
+      iirStep[3] <= 24'h000000;
+      iirStep[4] <= 24'h000000;
+      iirStep[5] <= 24'h000000;
+      iirStep[6] <= 24'h000000;
+    end
+    else begin
+      iirStep[0] <=  multProducts_left[0]; // 1836.17285181176 = flop(0, 24 - 1)
+      iirStep[1] <=  iirStep[0] + multProducts_left[1] + multProducts_right[0]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+      iirStep[2] <=  iirStep[1] + multProducts_left[2] + multProducts_right[1]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+      iirStep[3] <=  iirStep[2] + multProducts_left[3] + multProducts_right[2]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+      iirStep[4] <=  iirStep[3] + multProducts_left[4] + multProducts_right[3]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+      iirStep[5] <=  iirStep[4] + multProducts_left[5] + multProducts_right[4]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+      iirStep[6] <=  iirStep[5] + multProducts_left[6] + multProducts_right[5]; // 5109.35053165294 = 2*adder(24) + flop(0, 24 - 1)
+    end
+  end
+
+  assign outData_in = iirStep[6]+ multProducts_left[7]+ multProducts_right[6]; // 3273.17767984118 = 2*adder(24)
+
+  //type2_iir area estimate = 39437.7994251941;
+endmodule //type2_iir
